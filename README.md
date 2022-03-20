@@ -1,23 +1,37 @@
-# Rust Smart Contract Template
+# Lottery Smart Contract on NEAR testnet in Rust
 
-## Getting started
+## Description
 
-To get started with this template:
+This contract implements simple lottery game. 
 
-1. Click the "Use this template" button to create a new repo based on this template
-2. Update line 2 of `Cargo.toml` with your project name
-3. Update line 4 of `Cargo.toml` with your project author names
-4. Set up the [prerequisites](https://github.com/near/near-sdk-rs#pre-requisites)
-5. Begin writing your smart contract in `src/lib.rs`
-6. Test the contract 
+Contract in src/lib.rs provides methods to 
+    1. Set a winning lottery number 
+    2. Guess the winning lottery number
 
-    `cargo test -- --nocapture`
+## Setup
+Follow the guide provided by NEAR Org (https://www.near-sdk.io/zero-to-hero/basics/set-up-skeleton)
 
-8. Build the contract
-
-    `RUSTFLAGS='-C link-arg=-s' cargo build --target wasm32-unknown-unknown --release`
+## Interact
+1. Login to NEAR CLI 
+2. Create a subaccount
+```
+near create-account lottery.<yourAcc>.testnet --masterAccount <yourAcc>.testnet
+```
+3. Compile smart contract
+```
+./build.sh
+```
+4. Deploy smart contract using batch actions
+```
+near deploy lottery.<yourAcc>.testnet --wasmFile res/lottery.wasm \
+  --initFunction 'new' \
+  --initArgs '{"winner": <winningNum>}'
+```
+5. Guess the winning number
+```
+near call lottery.ryantan.testnet guess_number '{"guess": <guessNum>}' --accountId <yourAcc>.testnet
+```
 
 **Get more info at:**
-
-* [Rust Smart Contract Quick Start](https://docs.near.org/docs/develop/contracts/rust/intro)
 * [Rust SDK Book](https://www.near-sdk.io/)
+* [Template](https://github.com/near-examples/rust-template)
