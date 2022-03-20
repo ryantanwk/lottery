@@ -1,7 +1,7 @@
 [package]
-name = "rust-template"
+name = "lottery"
 version = "0.1.0"
-authors = ["Near Inc <hello@near.org>"]
+authors = ["ryantan.near <ryantan2103@gmail.com>"]
 edition = "2018"
 
 [lib]
