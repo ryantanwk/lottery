@@ -1,30 +1,48 @@
 use near_sdk::borsh::{self, BorshDeserialize, BorshSerialize};
-use near_sdk::{env, near_bindgen};
+use near_sdk::{env, near_bindgen,Promise};
+
+// 1 NEAR in yoctoNEAR
+const PRIZE_AMOUNT: u128 = 1_000_000_000_000_000_000_000_000;
 
 #[near_bindgen]
 #[derive(Default, BorshDeserialize, BorshSerialize)]
 pub struct Contract {
     // SETUP CONTRACT STATE
-    winning_number: u32,
+    winning_number: String,
+    is_solved: bool,
 }
 
 #[near_bindgen]
 impl Contract {
     // INITIALIZE CONTRACT, PREVENTS CHANGES TO THE CONTRACT
     #[init]
-    pub fn new(winner: u32) -> Self {
-            Self{winning_number: winner,}
+    pub fn new(winner: String) -> Self {
+            Self{winning_number: winner, is_solved: false}
     }
 
     // ADD CONTRACT METHODS HERE
-    pub fn get_winning_number(&self) -> u32 {
-        self.winning_number
+    pub fn get_winning_number(&self) -> String {
+        self.winning_number.clone()
     }
 
-    pub fn guess_number(&mut self, guess: u32) -> bool {
-        if guess == self.winning_number {
-            env::log_str("You've found the winning number!");
-            return true;
+    pub fn guess_number(&mut self, guess: String) -> bool {
+        let hashed_input = env::sha256(guess.as_bytes());
+        let hashed_input_hex = hex::encode(&hashed_input);
+
+        if hashed_input_hex == self.winning_number {
+
+            // payout and update status if winning number found
+            if !self.is_solved {
+              env::log_str("You're the first to find the winning number!");
+              self.is_solved = true;
+              Promise::new(env::predecessor_account_id()).transfer(PRIZE_AMOUNT);
+
+            }
+            else {
+              env::log_str("You've found the winning number! But someone found it before you!");
+            }
+           return true;
+
         } else {
             env::log_str("Better luck next time!");
             return false;
@@ -56,6 +74,18 @@ mod tests {
 
     // TESTS HERE
     #[test]
+    fn debug_get_hash() {
+        // Basic set up for a unit test
+        testing_env!(VMContextBuilder::new().build());
+
+        // Using a unit test to rapidly debug and iterate
+        let debug_solution = "1234";
+        let debug_hash_bytes = env::sha256(debug_solution.as_bytes());
+        let debug_hash_string = hex::encode(debug_hash_bytes);
+        println!("Let's debug: {:?}", debug_hash_string);
+    }
+
+    #[test]
     fn check_guess_number() {
         // Set test account ID
         let dummy = AccountId::new_unchecked("ryantan.testnet".to_string());
@@ -65,16 +95,23 @@ mod tests {
         testing_env!(context.build());
 
         // Set up contract object and call the new method
-        let mut contract = Contract::new(1234,);
+        let mut contract = Contract::new
+            ("03ac674216f3e15c761ee1a5e255f067953623c8b388b4459e13f978d7c846f4".to_string(),);
 
-        let mut guess_result = contract.guess_number(4321);
+        let mut guess_result = contract.guess_number("4321".to_string());
         assert!(!(guess_result), "Expected a failure from the wrong guess");
         assert_eq!(get_logs(), ["Better luck next time!"],
             "Expected a failure log.");
 
-        guess_result = contract.guess_number(1234);
+        guess_result = contract.guess_number("1234".to_string());
         assert!(guess_result, "Expected the correct answer to return true.");
-        assert_eq!(get_logs(), ["Better luck next time!", "You've found the winning number!"],
+        assert_eq!(get_logs(), ["Better luck next time!", "You're the first to find the winning number!"],
             "Expected a successful log after the previous failed log.");
+
+        guess_result = contract.guess_number("1234".to_string());
+        assert!(guess_result, "Expected the correct answer to return true.");
+        assert_eq!(get_logs(), ["Better luck next time!", "You're the first to find the winning number!",
+           "You've found the winning number! But someone found it before you!"],
+           "Expected a successful log w/o payout after the previous successful log.");
     }
 }
